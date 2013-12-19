@@ -79,18 +79,23 @@ public class Client {
 			}
 			in.close();
 	 
-			//print result
+			
 			System.out.println(response.toString());
 			
-//			Bencoder bencoder = new Bencoder();
-//			HashMap<String, Object> unbencodedMap = bencoder.unbencodeDictionary(response);
-//			Iterator<Entry<String, Object>> it = unbencodedMap.entrySet().iterator();
-//			Entry<String, Object> entry = null;
-//			
-//			while (it.hasNext()) {
-//				entry = it.next();
-//				System.out.println("   * Key: '" + entry.getKey() + "' - Value: '" + entry.getValue().toString() + "'");
-//			}
+			Bencoder bencoder = new Bencoder();
+			HashMap<String, Object> unbencodedMap = bencoder.unbencodeDictionary(String.valueOf(response).getBytes());
+			Iterator<Entry<String, Object>> it = unbencodedMap.entrySet().iterator();
+			Entry<String, Object> entry = null;
+			
+			while (it.hasNext()) {
+				entry = it.next();
+				System.out.println("   * Key: '" + entry.getKey() + "' - Value: '" + entry.getValue().toString() + "'");
+			}
+			
+			
+			
+			
+			
 //		
 		} catch (MalformedURLException e) {
 			// TODO Auto-generated catch block
