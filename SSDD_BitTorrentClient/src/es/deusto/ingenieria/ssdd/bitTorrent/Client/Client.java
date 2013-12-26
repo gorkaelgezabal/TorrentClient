@@ -1,12 +1,15 @@
 package es.deusto.ingenieria.ssdd.bitTorrent.Client;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -125,7 +128,9 @@ public class Client {
 			
 			System.out.println("Connecting to "+InetAddress.getLocalHost()+":"+39402);
 			Socket socket = new Socket(InetAddress.getLocalHost(),39402 );
-			OutputStream socketOutputStream = socket.getOutputStream();
+			
+			
+			DataOutputStream socketOutputStream = new DataOutputStream(socket.getOutputStream());   
 			
 			Handsake handsake = new Handsake();
 			
@@ -135,8 +140,7 @@ public class Client {
 
 			handsake.setInfoHash(new String(hash));
 			handsake.setPeerId(peer_id);
-			String prueba = handsake.getInfoHash();
-			System.out.println("lenght"+prueba.getBytes().length);
+
 			
 			byte[] handsakeBytes=handsake.getBytes();
 			int handshakeLenght = handsakeBytes.length;
@@ -144,41 +148,22 @@ public class Client {
 			if(handshakeLenght != 68){
 				System.out.println("Handshake lenght incorrect");
 			}
-			socketOutputStream.write(handsakeBytes, 0,handshakeLenght);
-			socketOutputStream.close();
-			socket.close();
+			socketOutputStream.write(handsakeBytes);
+
 			System.out.println("Handsake sended:"+handsake.toString());
 			//Se recive el mensaje
-			
-			int BUFFER_SIZE = 65536;
-			ServerSocket serverSocket = new ServerSocket(PORT);
-			Socket clientSocket = serverSocket.accept();
-		
-			 long startTime = System.currentTimeMillis();
-	         byte[] buffer = new byte[BUFFER_SIZE];
-	         int read;
-	         int totalRead = 0;
-	       
+			      
 	         
-	         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-	         StringBuffer response2 = new StringBuffer();
-	         int inputLine;
-	         
-	         String payload = "";
-	         while ((inputLine = in.read()) != -1) {
-				
-	        	 System.out.println("reading");
-	        	 payload = payload + inputLine;
-				}
-				in.close();
+	         DataInputStream in = new DataInputStream(socket.getInputStream());
 
-			 
-			 System.out.println(payload);
-			 
-			 byte[] bytes = payload.getBytes();
-			 int value = ((bytes[0] & 0xFF) << 24) | ((bytes[1] & 0xFF) << 16)
-				        | ((bytes[2] & 0xFF) << 8) | (bytes[3] & 0xFF);
-			 System.out.println("Message lenght"+value);
+	         byte [] prueba2 = new byte[300];
+	         
+	         in.read(prueba2);
+
+
+			 System.out.println(new String(prueba2));
+			socketOutputStream.close();
+			socket.close();
 //		
 		} catch (MalformedURLException e) {
 			// TODO Auto-generated catch block

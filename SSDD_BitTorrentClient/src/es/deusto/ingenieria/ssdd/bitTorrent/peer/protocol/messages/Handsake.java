@@ -5,17 +5,23 @@ import java.io.ByteArrayOutputStream;
 public class Handsake {	
 	private static final String DEFAULT_PROTOCOL = "BitTorrent protocol";
 	private static final String RESERVED = "00000000";
+	private static final byte[] RESERVED2 = new byte[8];
 	
+	public static byte[] getReserved2() {
+		return RESERVED2;
+	}
+
+
 	private int nameLength;
 	private String protocolName;
-	private String reserved;
+	private byte[] reserved;
 	private String infoHash;
 	private String peerId;
 	
 	public Handsake() {		
 		this.protocolName = Handsake.DEFAULT_PROTOCOL;
 		this.nameLength = this.protocolName.length();
-		this.reserved = Handsake.RESERVED;
+		this.reserved = Handsake.RESERVED2;
 	}
 	
 	public int getNameLength() {
@@ -31,7 +37,7 @@ public class Handsake {
 		this.nameLength = protocolName.length();
 	}
 
-	public String getReserved() {
+	public byte[] getReserved() {
 		return reserved;
 	}
 
@@ -57,7 +63,7 @@ public class Handsake {
 
 			result.write(this.nameLength);
 			result.write(this.protocolName.getBytes());
-			result.write(this.reserved.getBytes());
+			result.write(this.reserved);
 			result.write(this.infoHash.getBytes());
 			result.write(this.peerId.getBytes());
 			
