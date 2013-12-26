@@ -34,6 +34,7 @@ import es.deusto.ingenieria.ssdd.bitTorrent.bencoding.Index;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.MetainfoFile;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.handler.MetainfoFileHandler;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.handler.SingleFileHandler;
+import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.BitfieldMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.Handsake;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.PeerProtocolMessage;
 import es.deusto.ingenieria.ssdd.bitTorrent.util.StringUtils;
@@ -167,8 +168,19 @@ public class Client {
 			}
 			
 			
-
-
+			
+//			Se separan los mensajes recividos
+			int from =0;
+			int to = 0;
+			int responseLength = responseBytes.length;
+			ArrayList<byte[]> messageByteList = new ArrayList<>();
+			
+			while(from < responseLength){
+				byte [] lenghtBytes = Arrays.copyOfRange(responseBytes, from, from+4);
+				to = ToolKit.bigEndianBytesToInt(lenghtBytes, 0)+4+from;
+				messageByteList.add(Arrays.copyOfRange(responseBytes, from, to));
+				from = to;
+			}
 			
 
 			socketOutputStream.close();
