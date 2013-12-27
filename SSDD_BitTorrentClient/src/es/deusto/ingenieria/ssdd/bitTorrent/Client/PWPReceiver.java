@@ -27,12 +27,12 @@ import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.UnChokeMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.util.ToolKit;
 
 
-public class PWP implements Runnable{
+public class PWPReceiver implements Runnable{
 
 	private Peer peer;
 	private MetainfoFile<?> metaInfo;
 
-	public PWP(Peer peer, MetainfoFile<?> metaInfo) {
+	public PWPReceiver(Peer peer, MetainfoFile<?> metaInfo) {
 		super();
 		this.peer = peer;
 		this.metaInfo = metaInfo;
