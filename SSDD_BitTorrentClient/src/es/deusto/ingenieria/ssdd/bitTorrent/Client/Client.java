@@ -51,7 +51,8 @@ public class Client {
 			//			Lanzar el hilo para escuchar las peticiones
 
 			PWPListener listenerThread = new PWPListener(PORT);
-			listenerThread.run();
+			Thread thread = new Thread(listenerThread);
+			thread.start();
 
 
 			System.out.println(response.toString());

@@ -28,7 +28,9 @@ public class PWPListener implements Runnable{
                 Socket socket = serverSocket.accept();
                 
                 PWPSender receiverThread = new PWPSender(socket);
-                receiverThread.run();
+                Thread thread = new Thread(receiverThread);
+    			thread.start();
+               
             }
 
 		} catch (IOException e) {
