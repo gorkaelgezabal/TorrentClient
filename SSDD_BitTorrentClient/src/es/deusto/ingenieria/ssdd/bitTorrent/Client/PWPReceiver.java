@@ -3,12 +3,17 @@ package es.deusto.ingenieria.ssdd.bitTorrent.Client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
+import es.deusto.ingenieria.ssdd.bitTorrent.Dao.Block;
 import es.deusto.ingenieria.ssdd.bitTorrent.Dao.Peer;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.MetainfoFile;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.BitfieldMsg;
@@ -26,7 +31,7 @@ import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.PortMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.RequestMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.UnChokeMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.util.ToolKit;
-
+import es.deusto.ingenieria.ssdd.bitTorrent.Dao.Piece;
 
 public class PWPReceiver implements Runnable{
 
@@ -76,12 +81,13 @@ public class PWPReceiver implements Runnable{
 		
 		
 		
-		//Se recive el mensaje
+		//Se recive el mensaje, provamos con 2
 		int k=0;
-		while(k<2){
+		while(k<3){
+			System.out.println("ciclo"+k);
 			k++;
 			DataInputStream in = new DataInputStream(socket.getInputStream());
-
+			
 			if(firstCon){
 				byte [] responseHandsake = new byte[68];
 				in.read(responseHandsake);
@@ -107,7 +113,7 @@ public class PWPReceiver implements Runnable{
 			int availableBytes = in.available();
 			byte [] responseBytes = new byte[availableBytes];
 			in.read(responseBytes);
-
+			
 			System.out.println(new String(responseBytes));
 			
 //			Se separan los mensajes recibidos
@@ -175,6 +181,8 @@ public class PWPReceiver implements Runnable{
 						byte[] interestBytes = interested.getBytes();
 						
 						socketOutputStream.write(interestBytes);
+						Thread.sleep(500);
+						System.out.println("interested writed");
 					}
 				}
 				else if(type.equals(Type.INTERESTED)){
@@ -187,7 +195,12 @@ public class PWPReceiver implements Runnable{
 					System.out.println("NOT_INTERESTED");
 				}
 				else if(type.equals(Type.PIECE)){
-					System.out.println("PIECE");
+					
+					PieceMsg piece = (PieceMsg) message;
+					byte[] payload = piece.getPayload();
+					piece.ge
+					writePiece(payload);
+					
 				}
 				else if(type.equals(Type.PORT)){
 					System.out.println("PORT");
@@ -197,6 +210,41 @@ public class PWPReceiver implements Runnable{
 				}
 				else if(type.equals(Type.UNCHOKE)){
 					System.out.println("UNCHOKE");
+					
+					List<Piece> torrentFile = Client.getTorrentFile();
+					int index =0;
+					int begin = 0;
+					boolean found = false;
+					for(int j=0; j<torrentFile.size()&&!found;j++){
+						
+						Piece currentPiece = torrentFile.get(j);
+						boolean downloaded = currentPiece.getDownloaded();
+						
+						if(!downloaded){
+							index = j;
+							ArrayList<Block> currentBlocks = currentPiece.getBlocks();
+							
+							boolean found2 = false;
+							for(int l=0;l<currentBlocks.size()&&!found2;l++){
+								
+								Block block = currentBlocks.get(l);
+								boolean downloadedBlock = block.getDownloaded();
+								
+								if(downloadedBlock){
+									begin = l;
+									found2=true;
+								}
+							}
+							
+							found = true;
+						}
+					}
+					RequestMsg request = new RequestMsg(index, begin, 32);
+					
+					byte[] requestBytes = request.getBytes();
+					
+					socketOutputStream.write(requestBytes);
+					Thread.sleep(500);
 				}
 				
 			}
@@ -212,6 +260,9 @@ public class PWPReceiver implements Runnable{
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}	
 
 
@@ -220,6 +271,29 @@ public class PWPReceiver implements Runnable{
 	public static boolean compareHash(String hash1, String hash2){
 		
 		return hash1.equals(hash2);
+	}
+	
+
+	public synchronized void writePiece(byte[] piece, int index){
+		
+        try {
+        	
+        	String fileName = metaInfo.getInfo().getName();
+        	File file = new File(fileName+".part");
+        	if(!file.exists()){
+        		file.createNewFile();
+        	}
+        	
+			RandomAccessFile raf = new RandomAccessFile(file, "rw");
+			
+			raf.seek();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public static PeerProtocolMessage parseMessage(byte[] msgBytes) {

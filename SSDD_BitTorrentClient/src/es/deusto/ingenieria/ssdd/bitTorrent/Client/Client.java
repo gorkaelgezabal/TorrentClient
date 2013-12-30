@@ -11,11 +11,14 @@ import java.net.ProtocolException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 
 import es.deusto.ingenieria.ssdd.bitTorrent.Dao.Peer;
+import es.deusto.ingenieria.ssdd.bitTorrent.Dao.Piece;
 import es.deusto.ingenieria.ssdd.bitTorrent.bencoding.Bencoder;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.MetainfoFile;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.handler.MetainfoFileHandler;
@@ -24,6 +27,9 @@ import es.deusto.ingenieria.ssdd.bitTorrent.util.ToolKit;
 
 public class Client {
 
+	private static List TorrentFile;
+	
+	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		int PORT = 3333;
@@ -41,7 +47,17 @@ public class Client {
 
 			String localPeerId = ToolKit.generatePeerId();
 			int numberOfPieces = metaInfo.getInfo().getByteSHA1().size();
+			int pieceLenght = metaInfo.getInfo().getPieceLength();
 			System.out.println("Number of pi"+numberOfPieces);
+			
+			ArrayList<Piece> MyPieces = new ArrayList<Piece>();
+			for(int i=0;i<numberOfPieces;i++){
+				Piece piece = new Piece(pieceLenght);
+				MyPieces.add(piece);
+			}
+			
+			TorrentFile = Collections.synchronizedList(MyPieces);
+			
 
 			/////////////   REQUEST TO TRACKER ////////////////////////////////			
 
@@ -175,4 +191,16 @@ public class Client {
 
 	}
 
+
+	public static List getTorrentFile() {
+		return TorrentFile;
+	}
+
+
+	public static void setTorrentFile(List torrentFile) {
+		TorrentFile = torrentFile;
+	}
+
+	
+	
 }
