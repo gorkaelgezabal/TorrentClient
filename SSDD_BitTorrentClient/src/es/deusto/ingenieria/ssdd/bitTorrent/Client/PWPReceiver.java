@@ -20,6 +20,7 @@ import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.InterestedMsg
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.KeepAliveMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.NotInterestedMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.PeerProtocolMessage;
+import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.PeerProtocolMessage.Type;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.PieceMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.PortMsg;
 import es.deusto.ingenieria.ssdd.bitTorrent.peer.protocol.messages.RequestMsg;
@@ -44,9 +45,13 @@ public class PWPReceiver implements Runnable{
 		//SEND HANDSAKE
 		//Para probar se manda la peticion al primero de la lista
 		try{
+			
+		boolean firstCon = true;	
+		boolean conected = true;	
+			
 		System.out.println("Connecting to "+peer.getIp()+":"+peer.getPort());
 		Socket socket = new Socket(peer.getIp(),peer.getPort() );
-
+		
 		DataOutputStream socketOutputStream = new DataOutputStream(socket.getOutputStream());   
 
 		Handsake handsake = new Handsake();
@@ -72,57 +77,132 @@ public class PWPReceiver implements Runnable{
 		
 		
 		//Se recive el mensaje
+		int k=0;
+		while(k<2){
+			k++;
+			DataInputStream in = new DataInputStream(socket.getInputStream());
+
+			if(firstCon){
+				byte [] responseHandsake = new byte[68];
+				in.read(responseHandsake);
+				System.out.println(new String(responseHandsake));
 
 
-		DataInputStream in = new DataInputStream(socket.getInputStream());
+//				SE PARSEA EL HANDSAKE (SOLO LA PRIMERA VEZ) 
+				System.out.println("Name length"+new Integer(responseHandsake[0]));
+				
+				byte [] hashBytes = Arrays.copyOfRange(responseHandsake, 28, 48);
+				System.out.println("Info hash recivido"+new String(hashBytes));
+				
+//				Se comprueba que tenemos el mismo fichero comparando el hash de respuesta con nuestro hash
+				if(compareHash(new String(hashBytes),new String(hash))){
+					System.out.println("Hash checked");
+				}
+				
+				firstCon = false;
+			}
 
-		byte [] responseHandsake = new byte[68];
-		in.read(responseHandsake);
-		System.out.println(new String(responseHandsake));
-
-		int availableBytes = in.available();
-		byte [] responseBytes = new byte[availableBytes];
-		in.read(responseBytes);
-
-		System.out.println(new String(responseBytes));
-		
-//		SE PARSEA EL HANDSAKE (SOLO LA PRIMERA VEZ) 
-		System.out.println("Name length"+new Integer(responseHandsake[0]));
-		
-		byte [] hashBytes = Arrays.copyOfRange(responseHandsake, 28, 48);
-		System.out.println("Info hash recivido"+new String(hashBytes));
-		
-//		Se comprueba que tenemos el mismo fichero comparando el hash de respuesta con nuestro hash
-		if(compareHash(new String(hashBytes),new String(hash))){
-			System.out.println("Hash checked");
-		}
-		
-		
-		
-//		Se separan los mensajes recibidos
-		int from =0;
-		int to = 0;
-		int responseLength = responseBytes.length;
-		ArrayList<byte[]> messageByteList = new ArrayList<>();
-		
-		while(from < responseLength){
-			byte [] lenghtBytes = Arrays.copyOfRange(responseBytes, from, from+4);
-			to = ToolKit.bigEndianBytesToInt(lenghtBytes, 0)+4+from;
-			messageByteList.add(Arrays.copyOfRange(responseBytes, from, to));
-			from = to;
-		}
-		
-//		Se parsean los mensajes recibidos
-		ArrayList<PeerProtocolMessage> parsedMessages = new ArrayList<>();
-		for(int i=0; i<messageByteList.size();i++){
 			
-			byte[] currentMessageBytes = messageByteList.get(i);				
-			PeerProtocolMessage message = parseMessage(currentMessageBytes);
-			parsedMessages.add(message);
+			
+			int availableBytes = in.available();
+			byte [] responseBytes = new byte[availableBytes];
+			in.read(responseBytes);
+
+			System.out.println(new String(responseBytes));
+			
+//			Se separan los mensajes recibidos
+			int from =0;
+			int to = 0;
+			int responseLength = responseBytes.length;
+			ArrayList<byte[]> messageByteList = new ArrayList<>();
+			
+			while(from < responseLength){
+				byte [] lenghtBytes = Arrays.copyOfRange(responseBytes, from, from+4);
+				to = ToolKit.bigEndianBytesToInt(lenghtBytes, 0)+4+from;
+				messageByteList.add(Arrays.copyOfRange(responseBytes, from, to));
+				from = to;
+			}
+			
+//			Se parsean los mensajes recibidos
+			ArrayList<PeerProtocolMessage> parsedMessages = new ArrayList<>();
+			for(int i=0; i<messageByteList.size();i++){
+				
+				byte[] currentMessageBytes = messageByteList.get(i);				
+				PeerProtocolMessage message = parseMessage(currentMessageBytes);
+				parsedMessages.add(message);
+			}
+			
+			
+			for(int i=0;i<parsedMessages.size();i++){
+				
+				PeerProtocolMessage message = parsedMessages.get(i);
+				
+				Type type = message.getType();
+				
+				
+				
+				if(type.equals(Type.BITFIELD)){
+					BitfieldMsg bitfield = (BitfieldMsg) message;
+					byte[] payload = bitfield.getPayload();
+					
+					
+				}
+				else if(type.equals(Type.CANCEL)){
+					System.out.println("CANCEL");
+				}
+				else if(type.equals(Type.CHOKE)){
+					System.out.println("CHOKE");
+				}
+				else if(type.equals(Type.HAVE)){
+					
+					HaveMsg have = (HaveMsg) message;
+					byte[] payload = have.getPayload();
+					int pieceIndex = ToolKit.bigEndianBytesToInt(payload, 0);
+					
+					ArrayList<Boolean> pieces = peer.getPieces();
+					pieces.set(pieceIndex, true);
+					peer.setPieces(pieces);
+					System.out.println("Have index :"+pieceIndex);
+					
+					if(i==parsedMessages.size()-1){
+						
+						InterestedMsg interested = new InterestedMsg();
+						byte[] lenghtBytes = new byte[4];
+						
+						
+						byte[] lenght = ToolKit.intToBigEndianBytes(1, lenghtBytes, 0);
+						interested.setLength(lenght);
+						byte[] interestBytes = interested.getBytes();
+						
+						socketOutputStream.write(interestBytes);
+					}
+				}
+				else if(type.equals(Type.INTERESTED)){
+					System.out.println("INTERESTED");
+				}
+				else if(type.equals(Type.KEEP_ALIVE)){
+					System.out.println("KEEP_ALIVE");
+				}
+				else if(type.equals(Type.NOT_INTERESTED)){
+					System.out.println("NOT_INTERESTED");
+				}
+				else if(type.equals(Type.PIECE)){
+					System.out.println("PIECE");
+				}
+				else if(type.equals(Type.PORT)){
+					System.out.println("PORT");
+				}
+				else if(type.equals(Type.REQUEST)){
+					System.out.println("REQUEST");
+				}
+				else if(type.equals(Type.UNCHOKE)){
+					System.out.println("UNCHOKE");
+				}
+				
+			}
+
 		}
 		
-		
-
 		socketOutputStream.close();
 		socket.close();
 			//		

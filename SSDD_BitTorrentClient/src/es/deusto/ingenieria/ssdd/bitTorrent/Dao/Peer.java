@@ -1,6 +1,7 @@
 package es.deusto.ingenieria.ssdd.bitTorrent.Dao;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 
 import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
@@ -10,9 +11,9 @@ public class Peer {
 	private int port;
 	private String state;
 	private String id;
-	//FALTA POR PONER
-	//lista de bloques descargados
-	//
+	private ArrayList<Boolean> pieces = new ArrayList<Boolean>() ;
+	
+	
 	public InetAddress getIp() {
 		return ip;
 	}
@@ -36,6 +37,12 @@ public class Peer {
 	}
 	public void setId(String id) {
 		this.id = id;
+	}
+	public ArrayList<Boolean> getPieces() {
+		return pieces;
+	}
+	public void setPieces(ArrayList<Boolean> pieces) {
+		this.pieces = pieces;
 	}
 	
 	

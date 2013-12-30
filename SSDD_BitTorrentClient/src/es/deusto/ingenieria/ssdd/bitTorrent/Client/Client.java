@@ -14,12 +14,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+
 import es.deusto.ingenieria.ssdd.bitTorrent.Dao.Peer;
 import es.deusto.ingenieria.ssdd.bitTorrent.bencoding.Bencoder;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.MetainfoFile;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.handler.MetainfoFileHandler;
 import es.deusto.ingenieria.ssdd.bitTorrent.metainfo.handler.SingleFileHandler;
-
 import es.deusto.ingenieria.ssdd.bitTorrent.util.ToolKit;
 
 public class Client {
@@ -39,12 +39,13 @@ public class Client {
 
 			MetainfoFile<?> metaInfo = handler.getMetainfo();
 
-
-
+			String localPeerId = ToolKit.generatePeerId();
+			int numberOfPieces = metaInfo.getInfo().getByteSHA1().size();
+			System.out.println("Number of pi"+numberOfPieces);
 
 			/////////////   REQUEST TO TRACKER ////////////////////////////////			
 
-			String localPeerId = ToolKit.generatePeerId();
+			
 
 			String response = notifyTracker(handler.getMetainfo(),localPeerId,Integer.toString(PORT),"0","0","16384","started");
 
@@ -92,8 +93,15 @@ public class Client {
 					//Get peer id
 					String peerId =(String) currentHash.get("peer id");
 					currentPeer.setId(peerId);
-
 					peerList.add(currentPeer);
+					
+					ArrayList<Boolean> pieces = new ArrayList<Boolean>();
+					for(int j=0; j<numberOfPieces;j++){
+						pieces.add(false);
+					}
+					
+					currentPeer.setPieces(pieces);
+					
 				}
 
 			}
