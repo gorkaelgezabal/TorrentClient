@@ -28,7 +28,7 @@ import es.deusto.ingenieria.ssdd.bitTorrent.util.ToolKit;
 public class Client {
 
 	private static List TorrentFile;
-	
+	private static String localPeerId;
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
@@ -45,14 +45,22 @@ public class Client {
 
 			MetainfoFile<?> metaInfo = handler.getMetainfo();
 
-			String localPeerId = ToolKit.generatePeerId();
-			int numberOfPieces = metaInfo.getInfo().getByteSHA1().size();
+			localPeerId = ToolKit.generatePeerId();
 			int pieceLenght = metaInfo.getInfo().getPieceLength();
-			System.out.println("Number of pi"+numberOfPieces);
+			int fileLength = metaInfo.getInfo().getLength();
+			
+			int pieceCount = fileLength/pieceLenght;//Numero piezas
+			int lastPieceBlocks = (fileLength%pieceLenght)/32;//Resto de bloques
 			
 			ArrayList<Piece> MyPieces = new ArrayList<Piece>();
-			for(int i=0;i<numberOfPieces;i++){
+			for(int i=0;i<pieceCount;i++){
+				System.out.println("Piece length" + pieceLenght);
 				Piece piece = new Piece(pieceLenght);
+				MyPieces.add(piece);
+			}
+			
+			if(lastPieceBlocks != 0){
+				Piece piece = new Piece(lastPieceBlocks);
 				MyPieces.add(piece);
 			}
 			
@@ -112,7 +120,11 @@ public class Client {
 					peerList.add(currentPeer);
 					
 					ArrayList<Boolean> pieces = new ArrayList<Boolean>();
-					for(int j=0; j<numberOfPieces;j++){
+					for(int j=0; j<pieceCount;j++){
+						pieces.add(false);
+					}
+					
+					if(lastPieceBlocks != 0){
 						pieces.add(false);
 					}
 					
@@ -201,6 +213,17 @@ public class Client {
 		TorrentFile = torrentFile;
 	}
 
+
+	public static String getLocalPeerId() {
+		return localPeerId;
+	}
+
+
+	public static void setLocalPeerId(String localPeerId) {
+		Client.localPeerId = localPeerId;
+	}
+
+	
 	
 	
 }

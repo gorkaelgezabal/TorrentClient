@@ -37,7 +37,7 @@ public class PWPReceiver implements Runnable{
 
 	private Peer peer;
 	private MetainfoFile<?> metaInfo;
-
+	private static int TIME=100;
 	public PWPReceiver(Peer peer, MetainfoFile<?> metaInfo) {
 		super();
 		this.peer = peer;
@@ -83,7 +83,7 @@ public class PWPReceiver implements Runnable{
 		
 		//Se recive el mensaje, provamos con 2
 		int k=0;
-		while(k<3){
+		while(k<513){
 			System.out.println("ciclo"+k);
 			k++;
 			DataInputStream in = new DataInputStream(socket.getInputStream());
@@ -181,7 +181,7 @@ public class PWPReceiver implements Runnable{
 						byte[] interestBytes = interested.getBytes();
 						
 						socketOutputStream.write(interestBytes);
-						Thread.sleep(500);
+						Thread.sleep(TIME);
 						System.out.println("interested writed");
 					}
 				}
@@ -198,8 +198,59 @@ public class PWPReceiver implements Runnable{
 					
 					PieceMsg piece = (PieceMsg) message;
 					byte[] payload = piece.getPayload();
-					piece.ge
-					writePiece(payload);
+					
+					
+					byte[] indexArray =Arrays.copyOfRange(payload, 0, 4);
+					int index = ToolKit.bigEndianBytesToInt(indexArray, 0);
+					
+					
+					byte[] offsetArray = Arrays.copyOfRange(payload, 4, 8);
+					int offset = ToolKit.bigEndianBytesToInt(offsetArray, 0);
+					
+					byte[] data = Arrays.copyOfRange(payload, 8, payload.length);
+					List torrentFile = (List)Client.getTorrentFile();
+					Piece piece2 = (Piece) torrentFile.get(index);
+					ArrayList<Block> blocks = piece2.getBlocks();
+					
+					int blockIndex = offset/32;
+					
+					
+					if(!blocks.get(blockIndex).getDownloaded()){
+						
+						blocks.get(blockIndex).setBytes(data);
+						blocks.get(blockIndex).setDownloaded(true);
+					}
+					
+					System.out.println("Piece added index:"+blockIndex);
+					piece2.setBlocks(blocks);
+					torrentFile.set(index, piece2);
+					Client.setTorrentFile(torrentFile);
+					int fileLenght = metaInfo.getInfo().getLength();
+					
+					
+					sendRequest(socketOutputStream);
+					
+					if(blockIndex==piece2.getBlocks().size()-1){
+						
+						piece2.setDownloaded(true);
+
+						ArrayList<Block> arrBlocks = piece2.getBlocks();
+						int pieceLength = metaInfo.getInfo().getPieceLength();
+						int fileSize = metaInfo.getInfo().getLength();
+
+						for(int z=0;z<arrBlocks.size();z++){
+							
+							writePiece(arrBlocks.get(z).getBytes(), z*32+(pieceLength/fileSize)*index);
+							
+						}
+					
+					Client.notifyTracker(metaInfo, Client.getLocalPeerId(), peer.getPort(), 0, downloaded, 0, event);	
+					}
+					
+					
+					
+					
+					Thread.sleep(TIME);
 					
 				}
 				else if(type.equals(Type.PORT)){
@@ -210,41 +261,44 @@ public class PWPReceiver implements Runnable{
 				}
 				else if(type.equals(Type.UNCHOKE)){
 					System.out.println("UNCHOKE");
-					
-					List<Piece> torrentFile = Client.getTorrentFile();
-					int index =0;
-					int begin = 0;
-					boolean found = false;
-					for(int j=0; j<torrentFile.size()&&!found;j++){
-						
-						Piece currentPiece = torrentFile.get(j);
-						boolean downloaded = currentPiece.getDownloaded();
-						
-						if(!downloaded){
-							index = j;
-							ArrayList<Block> currentBlocks = currentPiece.getBlocks();
-							
-							boolean found2 = false;
-							for(int l=0;l<currentBlocks.size()&&!found2;l++){
-								
-								Block block = currentBlocks.get(l);
-								boolean downloadedBlock = block.getDownloaded();
-								
-								if(downloadedBlock){
-									begin = l;
-									found2=true;
-								}
-							}
-							
-							found = true;
-						}
-					}
-					RequestMsg request = new RequestMsg(index, begin, 32);
-					
-					byte[] requestBytes = request.getBytes();
-					
-					socketOutputStream.write(requestBytes);
-					Thread.sleep(500);
+
+					sendRequest(socketOutputStream);
+//					List<Piece> torrentFile = Client.getTorrentFile();
+//					int index =0;
+//					int begin = 0;
+//					boolean found = false;
+//					for(int j=0; j<torrentFile.size()&&!found;j++){
+//						
+//						Piece currentPiece = torrentFile.get(j);
+//						boolean downloaded = currentPiece.getDownloaded();
+//						
+//						if(!downloaded){
+//							index = j;
+//							ArrayList<Block> currentBlocks = currentPiece.getBlocks();
+//							
+//							boolean found2 = false;
+//							for(int l=0;l<currentBlocks.size()&&!found2;l++){
+//								
+//								Block block = currentBlocks.get(l);
+//								boolean downloadedBlock = block.getDownloaded();
+//								
+//								if(downloadedBlock){
+//									begin = l;
+//									found2=true;
+//								}
+//							}
+//							
+//							found = true;
+//						}
+//					}
+//					
+//					System.out.println();
+//					RequestMsg request = new RequestMsg(index, begin, 32);
+//					
+//					byte[] requestBytes = request.getBytes();
+//					
+//					socketOutputStream.write(requestBytes);
+					Thread.sleep(TIME);
 				}
 				
 			}
@@ -268,25 +322,80 @@ public class PWPReceiver implements Runnable{
 
 	}
 
+	public static boolean sendRequest(DataOutputStream socketOutputStream){
+
+		try {
+
+			List<Piece> torrentFile = Client.getTorrentFile();
+			int index =0;
+			int begin = 0;
+			boolean found = false;
+			for(int j=0; j<torrentFile.size()&&!found;j++){
+				
+				Piece currentPiece = torrentFile.get(j);
+				boolean downloaded = currentPiece.getDownloaded();
+				
+				if(!downloaded){
+					index = j;
+					ArrayList<Block> currentBlocks = currentPiece.getBlocks();
+					
+					boolean found2 = false;
+					for(int l=0;l<currentBlocks.size()&&!found2;l++){
+						
+						Block block = currentBlocks.get(l);
+						boolean downloadedBlock = block.getDownloaded();
+						
+						if(!downloadedBlock){
+							begin = l;
+							found2=true;
+						}
+					}
+					
+					found = true;
+				}
+			}
+			
+			
+			
+			RequestMsg request = new RequestMsg(index, begin*32, 32);
+			
+			System.out.println("Index"+index);
+			System.out.println("Begin"+begin);
+			byte[] requestBytes = request.getBytes();
+			socketOutputStream.write(requestBytes);
+			
+			System.out.println("Request sended");
+			return true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
 	public static boolean compareHash(String hash1, String hash2){
 		
 		return hash1.equals(hash2);
 	}
 	
 
-	public synchronized void writePiece(byte[] piece, int index){
+	public synchronized void writePiece(byte[] piece, int offset){
 		
         try {
         	
         	String fileName = metaInfo.getInfo().getName();
-        	File file = new File(fileName+".part");
+        	File file = new File("C:\\users\\Nirie\\bli.part");
+        	
+        	System.out.println("File path"+file.getAbsolutePath());
         	if(!file.exists()){
         		file.createNewFile();
         	}
         	
 			RandomAccessFile raf = new RandomAccessFile(file, "rw");
 			
-			raf.seek();
+			raf.seek(offset);
+			raf.write(piece, 0, piece.length);
+			raf.close();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -8,17 +8,19 @@ public class Piece {
 	private ArrayList<Block> blocks;
 	
 	
-	public Piece(Integer pieceLenght) {
+	public Piece(Integer blocks) {
 		super();
 		this.downloaded = false;
 		
-		int blocks = pieceLenght/32;
+		
 		
 		ArrayList<Block> blockList = new ArrayList<>();
 		for(int i=0;i<blocks;i++){
+			System.out.println("block added");
 			Block block = new Block();
 			block.setDownloaded(false);
 			block.setBytes(new byte [32]);
+			blockList.add(block);
 		}
 		this.blocks = blockList;
 	}
